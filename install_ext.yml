@@ -1,0 +1,99 @@
+- name: Build ansible inventory
+  hosts: localhost
+  vars:
+    ip_list: "[\"{{ BEI_IPS | replace(' ','') | replace(',','\",\"') }}\"]"
+  tasks:
+    - name: Add hosts where application needs to be deployed in ansible in-memory inventory
+      add_host:
+        name: "{{ item }}"
+        groups: GR_Hosts
+        ansible_user: ansible
+        ansible_become_user: root
+        ansible_become_method: sudo
+      with_items: "{{ ip_list }}"
+
+- name: Play to install Python Packages on GR VMs
+  hosts: GR_Hosts
+  become: yes
+
+  vars:
+    yum_repo: "http://10.3.87.105/Catalog/OS/RHEL/7/7.3_64bits/YumRepository/"
+    artifactory_repo: "artifactory-cwfr1.rd.francetelecom.fr/artifactory/yum-virt-orange-project-orangemoney-core-el7-unstable/"
+    PROXY_IP: "http-proxy-gin"
+    
+  tasks:
+
+      - name: Create Mount Point
+        file:
+         name: "/var/opt/data/reports_{{ COUNTRY }}/"
+         state: directory
+         owner: osadmin
+         group: osadmin
+         mode: 0755
+         
+      - name: Mount Filer #1
+        mount:
+         path: "/var/opt/data/reports_o{{ COUNTRY }}/"
+         src: "{{ FILER_NAME }}"
+         fstype: nfs
+         dump: 1
+         passno: 2
+         opts: defaults,nodev,nolock,rw
+         state: mounted
+          - name: Extract Compliance
+        environment:
+        https_proxy: https://{{ PROXY_IP }}:3128/
+        git:
+        repo: 'https://gitlab+deploy-token-1652:BvB8-hDnvH848oaum59x@gitlab.innov.intraorange/GR-OMCloud/compliance.git'
+         dest: /opt/application/compliance/
+         force: yes
+        
+      - name: Change ownership
+        file:
+         path: "/opt/application/compliance"
+         owner: osadmin
+         group: osadmin
+         recurse: yes
+         
+      - name: Install oracle-instantclient
+        yum:
+         name: "/home/ansible/Python_Bundle/{{ item }}"
+         state: present
+         disablerepo: '*'
+        with_items:
+         - oracle-instantclient11.2-basic-11.2.0.2.0.x86_64.rpm
+         - oracle-instantclient11.2-devel-11.2.0.2.0.x86_64.rpm
+     
+      - name: Configure Oracle Client #1
+        shell: sh -c "echo /usr/lib/oracle/11.2/client64/lib > /etc/ld.so.conf.d/oracle-instantclient.conf"
+       
+      - name: Configure Oracle Client #2
+        file:
+         name: /etc/ld.so.conf.d/oracle-instantclient.conf
+         mode: 0644
+    
+      - name: Configure Oracle Client #3
+        shell: ldconfig
+    
+      - name: Installing cx_Oracle-5.3
+        shell: cd /home/ansible/Python_Bundle/cx_Oracle-5.3 ; /usr/local/bin/python3.5 setup.py install
+    
+      - name: Installing pycrypto-2.6.1
+        shell: cd /home/ansible/Python_Bundle/pycrypto-2.6.1 ; /usr/local/bin/python3.5 setup.py install
+    
+      - name: Set permissions for COMPLIANCE
+        file:
+         name: /opt/application/compliance/
+         owner: osadmin
+         group: osadmin
+         mode: 0755
+         recurse: yes
+         
+      - name: Crontab Delta Entry for COMPLIANCE
+        cron:
+         name: Cronjob for COMPLIANCE-DELTA
+         weekday: 1,2,3,4,5,6
+         minute: 4
+         hour: 11
+         user: osadmin
+         job: "cd /opt/application/compliance && /usr/local/bin/python3.5 compliance.py --runtype delta     ####For delta"
