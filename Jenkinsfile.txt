@@ -8,10 +8,9 @@ pipeline {
         timeout(time: 30, unit: 'MINUTES')
     }
     parameters {
-        credentials(credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl', defaultValue: '', description: 'Jenkins wants to use the "OMCloud-Active-Directory" credentials. Select your credential to allow this.', name: 'OMCloud-Active-Directory', required: true)
         choice(name: 'Update_Job_Config', choices:"Yes\nNo", description: "Do you want to do a dry run to update job to latest version and grab parameters?" )        
         choice(name: 'Site', choices:"Rueil\nNormandie", description: "Deployment Site")
-        string(name: 'VMName', defaultValue: 'qpr-sn-gr-app01', description: 'Name of Reporting VM')
+        string(name: 'VMName', defaultValue: '172.31.46.181', description: 'Name of Reporting VM')
     }
     stages {
             stage('Updating Job Config') {
