@@ -1,5 +1,5 @@
 - name: Build ansible inventory
-  hosts: localhost
+  hosts: 172.31.46.181 
   vars:
     ip_list: "[\"{{ BEI_IPS | replace(' ','') | replace(',','\",\"') }}\"]"
   tasks:
