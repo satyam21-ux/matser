@@ -25,7 +25,7 @@
 
       - name: Create Mount Point
         file:
-         name: "/var/opt/data/reports_{{ COUNTRY }}/"
+         name: "/var/opt/data/reports_{{ 172.31.46.181 }}/"
          state: directory
          owner: osadmin
          group: osadmin
@@ -33,7 +33,7 @@
          
       - name: Mount Filer #1
         mount:
-         path: "/var/opt/data/reports_o{{ COUNTRY }}/"
+         path: "/var/opt/data/reports_o{{ 172.31.46.181 }}/"
          src: "{{ FILER_NAME }}"
          fstype: nfs
          dump: 1
